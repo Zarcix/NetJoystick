@@ -1,22 +1,27 @@
-use evdev::Device;
+use evdev::EventStream;
+
 
 pub struct CliController {
-	id: Device, // ID of current device
+	device: EventStream, // ID of current device
 }
 
 // Setter Getter
 impl CliController {
-	pub fn get_id(&self) -> &Device {
-		return &self.id
+	pub fn get_device(&self) -> &EventStream {
+		return &self.device
 	}
 	
-	pub fn set_id(&mut self, new_id: Device) {
-		self.id = new_id
+	pub fn change_device(&mut self, new_id: EventStream) {
+		self.device = new_id
 	}
 }
 
 impl CliController {
-	pub fn new(id: Device) -> Self {
-		Self {id}
+	pub fn new(device: EventStream) -> Self {
+		Self {device}
+	}
+	
+	pub async fn next_event(&mut self) -> Result<evdev::InputEvent, std::io::Error> {
+		return self.device.next_event().await
 	}
 }

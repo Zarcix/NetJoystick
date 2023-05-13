@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 ## Linux
 # Client
-evdev = "0.12.0" # Hook onto device
-
+evdev = {version = "0.12.0", features = ["tokio"]} # Hook onto device
+tokio = {version = "1.28.0", features = ["full"]}
 # Server
 input-linux = "0.6.0"
