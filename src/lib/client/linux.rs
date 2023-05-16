@@ -146,7 +146,7 @@ impl CliController {
 		let r_j_calibration = Vec::from([Vec::from([r_h_min, r_h_max]), Vec::from([r_v_min, r_v_max])]);
 		
 		// Triggers
-		let t_calibration = Vec::from([Vec::from([r_t_min, r_t_max])]);
+		let t_calibration = Vec::from([Vec::from([l_t_min, l_t_max]), Vec::from([r_t_min, r_t_max])]);
 		
 		self.calibration = [l_j_calibration.as_slice(), r_j_calibration.as_slice(), t_calibration.as_slice()].concat();
 		
