@@ -64,7 +64,7 @@ fn main() -> std::io::Result<()> {
         
         // Get user input for device selection
         
-        let chosen_device = 0;
+        let chosen_device = 3;
         let mut device = device_list.remove(chosen_device);
         drop(device_list); 
         
@@ -79,7 +79,7 @@ fn main() -> std::io::Result<()> {
         
         // Create Device
         let runtime = tokio::runtime::Runtime::new().unwrap();
-        let user_cli = runtime.block_on(async {Arc::new(Mutex::new(CliController::new(device.1.into_event_stream().unwrap())))});
+        let mut user_cli = runtime.block_on(async {Arc::new(Mutex::new(CliController::new(device.1.into_event_stream().unwrap())))});
         
         // Calibrate Device
         
@@ -89,18 +89,20 @@ fn main() -> std::io::Result<()> {
         
         // Create Client Channels
             
-        let (dev_socket_send, dev_socket_recv) = std::sync::mpsc::channel::<(Arc<Mutex<CliController>>, Arc<UdpSocket>)>();
+        let (mut dev_socket_send, mut dev_socket_recv) = std::sync::mpsc::channel::<(Arc<Mutex<CliController>>, Arc<UdpSocket>)>();
         
 		// Start Controller Thread
         
-        std::thread::spawn(move || {
+        let mut thread = std::thread::spawn(move || {
+            let runtime = tokio::runtime::Runtime::new().unwrap();
 			loop {
 				// Read input from channel
 				let pot_data = dev_socket_recv.recv();
 				if pot_data.is_err() {
                     // Recv failed, kill thread since send no longer exists
                     drop(dev_socket_recv);
-					panic!("A Sender Channel was closed. Killing thread...");
+					println!("A Sender Channel was closed. Killing thread...");
+                    break;
 				}
 				let (device, socket) = pot_data.unwrap();
 				let mut device = device.lock().unwrap();
@@ -117,7 +119,7 @@ fn main() -> std::io::Result<()> {
 					break;
 				}
 				let device_event = device_event.unwrap();
-				
+                
 				// TODO Convert event to packet
 				
 				// TODO Send packet over Socket
@@ -133,9 +135,74 @@ fn main() -> std::io::Result<()> {
 				panic!("Receive thread has died. Main Crashing...")
                 // TODO Perform a reset since device read failed
 			}
-			// TODO Check if user wishes to change device
 			
+			// TODO Check if user wishes to change device
+			let mut change_device = false;
+			
+            if change_device {
+                // Find device
+                let mut device_list = search_for_devices();
+                
+                for i in &device_list {
+                    println!("{:?}", i.1.name());
+                }
+                
+                // Get user input for device selection
+                
+                let chosen_device = 2;
+                let mut device = device_list.remove(chosen_device);
+                drop(device_list); 
+                
+                // Replace old client with new
+                user_cli = runtime.block_on(async {Arc::new(Mutex::new(CliController::new(device.1.into_event_stream().unwrap())))});
+                
+                // Calibrate New Controller
+                
+                let mut guard = user_cli.lock().unwrap();
+                guard.calibrate();
+                drop(guard);
+                
+                // Replace old channels with new
+                (dev_socket_send, dev_socket_recv) = std::sync::mpsc::channel::<(Arc<Mutex<CliController>>, Arc<UdpSocket>)>();
+                
+                // Replace old thread
+                thread.join().unwrap();
+                thread = std::thread::spawn(move || {
+                    let runtime = tokio::runtime::Runtime::new().unwrap();
+                    loop {
+                        // Read input from channel
+                        let pot_data = dev_socket_recv.recv();
+                        if pot_data.is_err() {
+                            // Recv failed, kill thread since send no longer exists
+                            drop(dev_socket_recv);
+                            println!("A Sender Channel was closed. Killing thread...");
+                            break;
+                        }
+                        let (device, socket) = pot_data.unwrap();
+                        let mut device = device.lock().unwrap();
+                        
+                        // Read Input from Device
+                        let device_event = runtime.block_on(async {
+                            // Run async code from client device
+                            let result = device.next_event().await;
+                            result
+                        });
+                        if device_event.is_err() {
+                            // Device Event is invalid now (allegedly). Kill recv and kill thread
+                            drop(dev_socket_recv);
+                            break;
+                        }
+                        let device_event = device_event.unwrap();
+                        
+                        // TODO Convert event to packet
+                        
+                        // TODO Send packet over Socket
+                        
+                    }
+                });
+            }
 			// TODO Check if user wishes to change server
+            let change_server = false;
 		}
     } else {
         // On Case of Server
