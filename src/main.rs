@@ -4,6 +4,48 @@ use lib::client::linux::CliController;
 
 use std::net::UdpSocket;
 
+use std::sync::{Arc, Mutex};
+
+/*** 
+ * Linux Helper Functions 
+ */
+
+/**
+ * Client Helper Functions
+ */
+
+fn search_for_devices() -> Vec<(std::path::PathBuf, evdev::Device)> {
+    let all_devs = evdev::enumerate();
+    
+    let mut available_devs = Vec::new();
+    
+    for dev in all_devs {
+        let cur_dev = dev.1.supported_absolute_axes().map(|ins| ins.iter().collect::<Vec<_>>().contains(&evdev::AbsoluteAxisType::ABS_X));
+        if cur_dev.is_some() && cur_dev.unwrap() == true {
+            available_devs.push(dev);
+        }
+    }
+    
+    return available_devs;
+}
+
+fn event_to_packet(event: evdev::InputEvent) {
+    // Packet Structure: [Client Id, Event Kind, Event Kind's Type, percentage value]
+    
+    let event_value = event.value();
+    
+}
+
+/**
+ * Server Helper Functions
+ */
+
+
+
+/***
+ * Linux Main
+ */
+
 #[cfg(target_os = "linux")]
 fn main() -> std::io::Result<()> {
     let client = true;
@@ -33,34 +75,43 @@ fn main() -> std::io::Result<()> {
         
         // Create Device
         
-        let userCli = std::sync::Arc::new(std::sync::Mutex::new(CliController::new(device.1.into_event_stream().unwrap())));
+        let user_cli = Arc::new(Mutex::new(CliController::new(device.1.into_event_stream().unwrap())));
+        
+        // Calibrate Device
+        
+        let mut guard = user_cli.lock().unwrap();
+        guard.calibrate();
+        drop(guard);
         
         // Create Client Channels
             
-        let (dev_socket_send, dev_socket_recv) = std::sync::mpsc::channel::<(std::sync::Arc<std::sync::Mutex<CliController>>, std::sync::Arc<UdpSocket>)>();
+        let (dev_socket_send, dev_socket_recv) = std::sync::mpsc::channel::<(Arc<Mutex<CliController>>, Arc<UdpSocket>)>();
         
-		// No mutexes are needed since only one thread is being created. No overwriting of data concurrently will happen like ever...hopefully
+		// Start Controller Thread
+        
+        let runtime = tokio::runtime::Runtime::new().unwrap();
 		
         std::thread::spawn(move || {
 			loop {
-				// Tokio Blocking Runtime
-				
-				
 				// Read input from channel
 				let pot_data = dev_socket_recv.recv();
 				if pot_data.is_err() {
-					panic!("Sender Channel was closed. Thread crashing...");
+                    // Recv failed, kill thread since send no longer exists
+                    drop(dev_socket_recv);
+					panic!("A Sender Channel was closed. Killing thread...");
 				}
 				let (device, socket) = pot_data.unwrap();
 				let mut device = device.lock().unwrap();
 				
 				// Read Input from Device
-				let runtime = tokio::runtime::Runtime::new().unwrap();
 				let device_event = runtime.block_on(async {
+                    // Run async code from client device
 					let result = device.next_event().await;
 					result
 				});
 				if device_event.is_err() {
+                    // Device Event is invalid now (allegedly). Kill recv and kill thread
+                    drop(dev_socket_recv);
 					break;
 				}
 				let device_event = device_event.unwrap();
@@ -75,28 +126,15 @@ fn main() -> std::io::Result<()> {
         
 		loop {
 			// Send Device and Socket to sender thread
-			let send_stat = dev_socket_send.send((userCli.clone(), socket.clone()));
+			let send_stat = dev_socket_send.send((user_cli.clone(), socket.clone()));
 			if send_stat.is_err() {
-				panic!("Receiver Channel was closed. Thread has died. Main Crashing...")
+				panic!("Receive thread has died. Main Crashing...")
+                // TODO Perform a reset since device read failed
 			}
 			// TODO Check if user wishes to change device
 			
 			// TODO Check if user wishes to change server
 		}
-		
-        //let device = Device {id: wanted_id.unwrap()};
-//         loop {
-//             let bytes = device.get_send_devEvent(&mut gilrs);
-//             if bytes.is_some() {
-//                 let mut amount = u16::from_be_bytes([bytes.unwrap()[3], bytes.unwrap()[4]]) as f32;
-//                 if bytes.unwrap()[2] == 0 {
-//                     amount = amount * -1.0;
-//                 }
-//                 println!("Sent Value: {}", amount);
-//                 
-//                 socket.send_to(&bytes.unwrap(), "192.168.4.122:999")?;
-//             }
-//         }
     } else {
         // On Case of Server
         
@@ -121,25 +159,26 @@ fn main() -> std::io::Result<()> {
     
 }
 
-fn search_for_devices() -> Vec<(std::path::PathBuf, evdev::Device)> {
-    let allDevs = evdev::enumerate();
-    
-    let mut available_devs = Vec::new();
-    
-    for dev in allDevs {
-        let cur_dev = dev.1.supported_absolute_axes().map(|ins| ins.iter().collect::<Vec<_>>().contains(&evdev::AbsoluteAxisType::ABS_X));
-        if cur_dev.is_some() && cur_dev.unwrap() == true {
-            available_devs.push(dev);
-        }
-    }
-    
-    return available_devs;
-}
+/***
+ * Windows Client Helper Functions
+ */
+
+/***
+ * Windows Main
+ */
 
 #[cfg(target_os = "windows")]
 fn main() {
     println!("TODO windows")
 }
+
+/***
+ * Mac Client Helper Functions
+ */
+
+/***
+ * Mac Main
+ */
 
 #[cfg(target_os = "macos")]
 fn main() {
