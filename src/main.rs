@@ -58,6 +58,10 @@ fn main() -> std::io::Result<()> {
         
         let mut device_list = search_for_devices();
         
+        for i in &device_list {
+            println!("{:?}", i.1.name());
+        }
+        
         // Get user input for device selection
         
         let chosen_device = 0;
@@ -74,8 +78,8 @@ fn main() -> std::io::Result<()> {
         socket.connect(format!("{}:69", chosen_server)).expect("could not connect to provided server");
         
         // Create Device
-        
-        let user_cli = Arc::new(Mutex::new(CliController::new(device.1.into_event_stream().unwrap())));
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let user_cli = runtime.block_on(async {Arc::new(Mutex::new(CliController::new(device.1.into_event_stream().unwrap())))});
         
         // Calibrate Device
         
@@ -89,8 +93,6 @@ fn main() -> std::io::Result<()> {
         
 		// Start Controller Thread
         
-        let runtime = tokio::runtime::Runtime::new().unwrap();
-		
         std::thread::spawn(move || {
 			loop {
 				// Read input from channel

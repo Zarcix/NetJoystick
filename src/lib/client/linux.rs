@@ -38,10 +38,10 @@ impl CliController {
 		let mut  l_v_min = i32::max_value();
 		let mut l_v_max = i32::min_value();
 		
-		// L Joystick Horizontal
+		// R Joystick Horizontal
 		let mut r_h_min = i32::max_value();
 		let mut  r_h_max = i32::min_value();
-		// L Joystick Vertical
+		// R Joystick Vertical
 		let mut  r_v_min = i32::max_value();
 		let mut  r_v_max = i32::min_value();
 		
@@ -80,6 +80,7 @@ impl CliController {
 			// Left
 			if event.kind() == evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_X) {
 				if l_h_min > event.value() {
+					println!("a");
 					l_h_min = event.value();
 				} else if l_h_max < event.value() {
 					l_h_max = event.value();
@@ -137,7 +138,19 @@ impl CliController {
 			
 		}
 		
-		println!("Calibration Results: {:?}", self.calibration);
+		//// Push into calibration
+		// Left Joystick
+		let l_j_calibration = Vec::from([Vec::from([l_h_min, l_h_max]), Vec::from([l_v_min, l_v_max])]);
+		
+		// Right Joystick
+		let r_j_calibration = Vec::from([Vec::from([r_h_min, r_h_max]), Vec::from([r_v_min, r_v_max])]);
+		
+		// Triggers
+		let t_calibration = Vec::from([Vec::from([r_t_min, r_t_max])]);
+		
+		self.calibration = [l_j_calibration.as_slice(), r_j_calibration.as_slice(), t_calibration.as_slice()].concat();
+		
+		println!("{:?}", self.calibration);
 	}
 	
 	pub async fn next_event(&mut self) -> Result<evdev::InputEvent, std::io::Error> {
