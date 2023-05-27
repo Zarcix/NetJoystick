@@ -1,2 +1,5 @@
 target/**
 Cargo.lock
+
+src/server/target/**
+src/client/target/**
