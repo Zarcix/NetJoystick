@@ -1,24 +1,15 @@
 [package]
-name = "Testsmth"
+name = "server"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[[bin]]
-name = "client"
-path = "src/client/src/main.rs"
-
-[[bin]]
-name = "server"
-path = "src/server/src/bin/main.rs"
-
 [dependencies]
-
 input-linux = "0.6.0"
 evdev = {version = "0.12.0", features = ["tokio"]}
-tokio = {version = "1.28.0", features = ["full"]}
 
 # For UI
 dioxus = "0.3.2"
 dioxus-desktop = "0.3.0"
+
