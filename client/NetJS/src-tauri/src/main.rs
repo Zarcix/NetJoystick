@@ -29,7 +29,7 @@ fn search_for_devices() -> Vec<(std::path::PathBuf, evdev::Device)> {
 fn run_server(device: Arc<Mutex<CliController>>, server: (&str, &str)) {
   /* PreReq Server Section */
 
-  let socket = std::sync::Arc::new(UdpSocket::bind("0.0.0.0:420").expect("could not bind to address"));
+  let socket = std::sync::Arc::new(UdpSocket::bind("0.0.0.0:1025").expect("could not bind to address"));
   socket.connect(format!("{}:{}", server.0, server.1)).expect("could not connect to provided server");
 
   /* PreReq Device Section */
