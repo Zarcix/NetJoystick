@@ -9,8 +9,8 @@ pub struct CliController {
 // Setter Getter
 
 impl CliController {
-	pub fn get_device(&self) -> &EventStream {
-		return &self.device
+	pub fn get_device(&mut self) -> &mut EventStream {
+		return &mut self.device
 	}
 	
 	pub fn change_device(&mut self, new_id: EventStream) {
@@ -26,7 +26,7 @@ impl CliController {
 		}
 	}
 	
-	pub fn calibrate(&mut self) {
+	pub fn calibrate(&mut self) -> Result<(), i32> {
 		println!("Calibration Called");
 		use std::time::{Duration, Instant};
 		
@@ -55,7 +55,7 @@ impl CliController {
 		
 		let mut start = Instant::now();
 		let end = start + Duration::from_secs(5);
-		
+
 		loop {
 			if start >= end {
 				break;
@@ -69,8 +69,7 @@ impl CliController {
 			});
 			
 			if event.is_err() {
-				println!("No next event in calibrate()");
-				return
+				return Err(1)
 			}
 			
 			let event = event.unwrap();
@@ -80,7 +79,6 @@ impl CliController {
 			// Left
 			if event.kind() == evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_X) {
 				if l_h_min > event.value() {
-					println!("a");
 					l_h_min = event.value();
 				} else if l_h_max < event.value() {
 					l_h_max = event.value();
@@ -150,7 +148,9 @@ impl CliController {
 		
 		self.calibration = [l_j_calibration.as_slice(), r_j_calibration.as_slice(), t_calibration.as_slice()].concat();
 		
-		println!("{:?}", self.calibration);
+		println!("--\nCalibration for device: {}\n{:?}\n--", self.device.device().name().unwrap(), self.calibration);
+
+		Ok(())
 	}
 	
 	pub async fn next_event(&mut self) -> Result<evdev::InputEvent, std::io::Error> {
