@@ -3,7 +3,7 @@ use evdev::EventStream;
 
 pub struct CliController {
 	device: EventStream, // ID of current device
-	calibration: Vec<Vec<i32>> // [[axis_min, axis_max], [axis_min, axis_max], [axis_min, axis_max]]
+	calibration: Vec<Vec<i32>> // [[LH], [LV], [RH], [RV], [TL], [TR]]
 }
 
 // Setter Getter
@@ -11,10 +11,6 @@ pub struct CliController {
 impl CliController {
 	pub fn get_device(&mut self) -> &mut EventStream {
 		return &mut self.device
-	}
-	
-	pub fn change_device(&mut self, new_id: EventStream) {
-		self.device = new_id
 	}
 }
 
@@ -31,9 +27,11 @@ impl CliController {
 		use std::time::{Duration, Instant};
 		
 		let runtime = tokio::runtime::Runtime::new().unwrap();
+
 		// L Joystick Horizontal
 		let mut l_h_min = i32::max_value();
 		let mut l_h_max = i32::min_value();
+
 		// L Joystick Vertical
 		let mut  l_v_min = i32::max_value();
 		let mut l_v_max = i32::min_value();
@@ -137,6 +135,7 @@ impl CliController {
 		}
 		
 		//// Push into calibration
+		
 		// Left Joystick
 		let l_j_calibration = Vec::from([Vec::from([l_h_min, l_h_max]), Vec::from([l_v_min, l_v_max])]);
 		
@@ -153,6 +152,58 @@ impl CliController {
 		Ok(())
 	}
 	
+	pub fn parse_input(&self, event: &evdev::InputEvent) -> (bool, u8) {
+		let mut val_vec = Vec::new();
+
+		let mut ret: (bool, u8) = (false, 0); // (neg bit, percentage * 100 as i32)
+
+		if event.value() < 0 { 
+			ret.0 = true;
+			val_vec = self.calibration.iter().map(|calib| {
+				calib.get(0).unwrap()
+			}).collect();
+		} else {
+			val_vec = self.calibration.iter().map(|calib| {
+				calib.get(1).unwrap()
+			}).collect();
+		}
+		
+		match &event.kind() {
+			// TODO There is a better way to do this....this has to be i'm just dumb
+			// Left
+			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_X) => {
+				ret.1 = (event.value() as f64 / *val_vec.get(0).unwrap().clone() as f64 * 100 as f64) as u8;
+			},
+			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_Y) => {
+				ret.1 = (event.value() as f64 / *val_vec.get(1).unwrap().clone() as f64 * 100 as f64) as u8;
+			},
+
+			// Right
+			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_RX) => {
+				ret.1 = (event.value() as f64 / *val_vec.get(2).unwrap().clone() as f64 * 100 as f64) as u8;
+			},
+			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_RY) => {
+				ret.1 = (event.value() as f64 / *val_vec.get(3).unwrap().clone() as f64 * 100 as f64) as u8;
+			},
+
+			// Triger
+			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_Z) => {
+				ret.1 = (event.value() as f64 / *val_vec.get(4).unwrap().clone() as f64 * 100 as f64) as u8;
+			},
+			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_RZ) => {
+				ret.1 = (event.value() as f64 / *val_vec.get(5).unwrap().clone() as f64 * 100 as f64) as u8;
+			},
+
+			// DPAD
+			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_HAT0X) | evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_HAT0Y) => {
+				ret.1 = event.value().abs() as u8;
+			}
+			_ => ()
+		}
+
+		ret
+	}
+
 	pub async fn next_event(&mut self) -> Result<evdev::InputEvent, std::io::Error> {
 		return self.device.next_event().await
 	}

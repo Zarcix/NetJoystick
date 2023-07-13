@@ -96,8 +96,10 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
 
   let (send, recv) = sync_channel::<()>(1);
   let device_threaded = Arc::clone(&device);
+  let server_threaded = Arc::clone(&cli_state.client_socket);
 
   {
+    // Why the fuck this shit so complicated for.... thread in thread my ass
     std::thread::spawn(move || { // Server Comms Thread
       let kill_thread = std::sync::Arc::new(std::sync::Mutex::new(false));
 
@@ -115,11 +117,97 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
             break;
           }
           runtime.block_on (async {
+            let mut send_vec: [u8;5]; // [valret.0, valret.1, kind.0, kind.1, evtype]
+
+            // Do device calculation stuff and send stuff here
             let input_ev = es.get_device().next_event().await.unwrap();
             if input_ev.event_type() != evdev::EventType::SYNCHRONIZATION {
-              println!("Device Thread: Input Events:\n{:?} || {:?} || {:?} || {:?}", input_ev.timestamp(), input_ev.event_type(), input_ev.code(), input_ev.value())
+              let mut parsed_input = es.parse_input(&input_ev);
+              
+              let mut kind = (0 as u8, 0 as u8); // [abs or key, code]
+              match input_ev.kind() {
+                evdev::InputEventKind::Key(val) => {
+                  // Order: A,B,X,Y,SELECT,START,TL,TR
+                  kind.0 = 1;
+                  match val {
+                    evdev::Key::BTN_SOUTH => {
+                      kind.1 = 0
+                    }
+                    evdev::Key::BTN_EAST => {
+                      kind.1 = 1
+                    }
+                    evdev::Key::BTN_NORTH => {
+                      kind.1 = 2
+                    }
+                    evdev::Key::BTN_WEST => {
+                      kind.1 = 3
+                    }
+                    evdev::Key::BTN_SELECT => {
+                      kind.1 = 4
+                    }
+                    evdev::Key::BTN_START => {
+                      kind.1 = 5
+                    }
+                    evdev::Key::BTN_TL => {
+                      kind.1 = 6
+                    }
+                    evdev::Key::BTN_TR => {
+                      kind.1 = 7
+                    }
+                    evdev::Key::BTN_THUMBL => {
+                      kind.1 = 8
+                    }
+                    evdev::Key::BTN_THUMBR => {
+                      kind.1 = 9
+                    }
+                    _ => {
+                      println!("{:?}", input_ev);
+                    }
+                  }
+                  parsed_input.1 = input_ev.value() as u8;
+                }
+                evdev::InputEventKind::AbsAxis(val) => {
+                  kind.0 = 2;
+                  match val {
+                    evdev::AbsoluteAxisType::ABS_X => {
+                      kind.1 = 0;
+                    }
+                    evdev::AbsoluteAxisType::ABS_Y => {
+                      kind.1 = 1;
+                    }
+                    evdev::AbsoluteAxisType::ABS_Z => {
+                      kind.1 = 2;
+                    }
+                    evdev::AbsoluteAxisType::ABS_RX => {
+                      kind.1 = 3;
+                    }
+                    evdev::AbsoluteAxisType::ABS_RY => {
+                      kind.1 = 4;
+                    }
+                    evdev::AbsoluteAxisType::ABS_RZ => {
+                      kind.1 = 5;
+                    }
+                    // TODO Add more keys
+                    _ => ()
+                  }
+                }
+                _ => ()
+              }
+              // Testing
+              
+              println!("Value Ret: {:?}", parsed_input);
+              println!("Kind: {:?}", kind);
+              println!("Event Type: {}", input_ev.event_type().0);
+              
+              send_vec = [parsed_input.0 as u8, parsed_input.1, kind.0, kind.1, input_ev.event_type().0 as u8];
+
+              let send_err = server_threaded.send(&send_vec);
+              if send_err.is_err() {
+                println!("OOPS: {:?}", send_err.err());
+              }
+
             }
-            });
+          });
         }
       });
 
