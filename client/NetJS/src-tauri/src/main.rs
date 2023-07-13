@@ -6,6 +6,7 @@ use lib::linux::CliController;
 
 use std::net::UdpSocket;
 use std::sync::{Arc, Mutex, mpsc::*};
+use log::*;
 
 struct Client {
   dev_list: Mutex<Vec<(std::path::PathBuf, evdev::Device)>>,
@@ -31,14 +32,10 @@ fn search_for_devices() -> Vec<(std::path::PathBuf, evdev::Device)> {
 fn init_device(device: &Arc<Mutex<CliController>>) -> Result<(), String> {
   // Calibrate
   let mut guard = device.lock().unwrap();
-  println!("{:?}", guard.get_device().device().input_id());
   if guard.calibrate().is_err() {
     return Err("Calibrate: No next_event() for provided device".into())
   }
   drop(guard);
-
-
-
   // If nothing broke until now, we're good to go
   Ok(())
 }
@@ -51,7 +48,7 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
     let previous_worker_exist = &cli_state.kill_old_sender.lock().unwrap();
     if previous_worker_exist.is_some() {
       if previous_worker_exist.as_ref().unwrap().send(()).is_err() {
-        println!("--\nFor some reason, old sender died. Old thread self killed so we're fine, continuing\n--")
+        warn!("--\nFor some reason, old sender died. Old thread self killed so we're fine, continuing\n--")
       }
     }
   }
@@ -63,7 +60,7 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
     runtime.block_on(async {Arc::new(Mutex::new(CliController::new(dev.into_event_stream().unwrap())))})
   };
 
-  println!("Device: {}", device.lock().unwrap().get_device().device().name().unwrap());
+  info!("Chosen Device: {}", device.lock().unwrap().get_device().device().name().unwrap());
 
   // Gets the server
   let ip;
@@ -81,7 +78,7 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
   
   { // Connect to Server
     if cli_state.client_socket.connect(format!("{}:{}", ip, port)).is_err() {
-      println!("Could not connect to provided server, quitting here");
+      error!("Could not connect to provided server, quitting here");
       return;
     }
   }
@@ -89,7 +86,7 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
   { // Init Device
     let dev_init_status = init_device(&device);
     if dev_init_status.is_err() {
-      println!("{}, quitting here", dev_init_status.err().unwrap());
+      error!("{}, quitting here", dev_init_status.err().unwrap());
       return;
     }
   }
@@ -112,12 +109,12 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
 
         loop {
           if kill_thread_spawner.lock().unwrap().clone() {
-            println!("Device Thread has died, no longer valid");
+            warn!("Device Thread has died, no longer valid");
             es.get_device().device_mut().ungrab().unwrap();
             break;
           }
           runtime.block_on (async {
-            let mut send_vec: [u8;5]; // [valret.0, valret.1, kind.0, kind.1, evtype]
+            let send_vec: [u8;5]; // [valret.0, valret.1, kind.0, kind.1, evtype]
 
             // Do device calculation stuff and send stuff here
             let input_ev = es.get_device().next_event().await.unwrap();
@@ -195,15 +192,15 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
               }
               // Testing
               
-              println!("Value Ret: {:?}", parsed_input);
-              println!("Kind: {:?}", kind);
-              println!("Event Type: {}", input_ev.event_type().0);
+              info!("Value Ret: {:?}", parsed_input);
+              info!("Kind: {:?}", kind);
+              info!("Event Type: {}", input_ev.event_type().0);
               
               send_vec = [parsed_input.0 as u8, parsed_input.1, kind.0, kind.1, input_ev.event_type().0 as u8];
 
               let send_err = server_threaded.send(&send_vec);
               if send_err.is_err() {
-                println!("OOPS: {:?}", send_err.err());
+                error!("Sending err: {:?}", send_err.err());
               }
 
             }
@@ -231,8 +228,6 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
 
 #[tauri::command]
 fn getDevices(cli_state: tauri::State<Client>) -> Vec<String> {
-  println!("Get Devices Called!");
-  
   let devices = search_for_devices();
   let dev_strings: Vec<String> = devices.iter().map(|x| x.1.name().unwrap().to_string()).collect();
   
@@ -242,6 +237,7 @@ fn getDevices(cli_state: tauri::State<Client>) -> Vec<String> {
 }
 
 fn main() {
+  env_logger::init();
   tauri::Builder::default()
     .manage(Client {
       dev_list: Vec::new().into(), 

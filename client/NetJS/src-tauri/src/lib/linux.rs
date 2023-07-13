@@ -1,5 +1,5 @@
 use evdev::EventStream;
-
+use log::*;
 
 pub struct CliController {
 	device: EventStream, // ID of current device
@@ -23,7 +23,7 @@ impl CliController {
 	}
 	
 	pub fn calibrate(&mut self) -> Result<(), i32> {
-		println!("Calibration Called");
+		info!("Calibration Called");
 		use std::time::{Duration, Instant};
 		
 		let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -147,7 +147,7 @@ impl CliController {
 		
 		self.calibration = [l_j_calibration.as_slice(), r_j_calibration.as_slice(), t_calibration.as_slice()].concat();
 		
-		println!("--\nCalibration for device: {}\n{:?}\n--", self.device.device().name().unwrap(), self.calibration);
+		info!("--\nCalibration for device: {}\n{:?}\n--", self.device.device().name().unwrap(), self.calibration);
 
 		Ok(())
 	}
