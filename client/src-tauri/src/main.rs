@@ -114,7 +114,7 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
             break;
           }
           runtime.block_on (async {
-            let send_vec: [u8;5]; // [valret.0, valret.1, kind.0, kind.1, evtype]
+            let send_vec: [u8;4]; // [valret.0, valret.1, kind.0, kind.1, evtype]
 
             // Do device calculation stuff and send stuff here
             let input_ev = es.get_device().next_event().await.unwrap();
@@ -161,7 +161,7 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
                       kind.1 = 10
                     }
                     _ => {
-                      println!("{:?}", input_ev);
+                      warn!("CLIENT | {:?} | Unrecognized Keycode", input_ev.kind());
                     }
                   }
                   parsed_input.1 = input_ev.value() as u8;
@@ -206,9 +206,8 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
               
               info!("Value Ret: {:?}", parsed_input);
               info!("Kind: {:?}", kind);
-              info!("Event Type: {}", input_ev.event_type().0);
               
-              send_vec = [parsed_input.0 as u8, parsed_input.1, kind.0, kind.1, input_ev.event_type().0 as u8];
+              send_vec = [parsed_input.0 as u8, parsed_input.1, kind.0, kind.1];
 
               let send_err = server_threaded.send(&send_vec);
               if send_err.is_err() {
@@ -223,7 +222,7 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
       let _ = recv.recv();
 
       // Once this is received, kill no matter the bool
-      println!("Kill Signal Received. Killing thread");
+      warn!("CLIENT | Server Connection Died. Killing Server Thread");
 
       let mut kt_lock = kill_thread.lock().unwrap();
       *kt_lock = true;

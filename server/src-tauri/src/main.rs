@@ -69,7 +69,7 @@ async fn reload_clients(app_handle: tauri::AppHandle) -> (Vec<String>, Vec<Strin
 #[tauri::command]
 fn init_server(app_handle: tauri::AppHandle) {
     let socket = std::net::UdpSocket::bind("0.0.0.0:1025").unwrap();
-    let mut data = [0; 5];
+    let mut data = [0; 4];
 
     std::thread::spawn(move || {
         loop {
