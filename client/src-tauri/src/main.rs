@@ -127,35 +127,38 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
                   // Order: A,B,X,Y,SELECT,START,TL,TR
                   kind.0 = 1;
                   match val {
-                    evdev::Key::BTN_SOUTH => {
+                    evdev::Key::BTN_SOUTH => { // A
                       kind.1 = 0
                     }
-                    evdev::Key::BTN_EAST => {
+                    evdev::Key::BTN_EAST => { // B
                       kind.1 = 1
                     }
-                    evdev::Key::BTN_NORTH => {
+                    evdev::Key::BTN_NORTH => { // X
                       kind.1 = 2
                     }
-                    evdev::Key::BTN_WEST => {
+                    evdev::Key::BTN_WEST => { // Y
                       kind.1 = 3
                     }
-                    evdev::Key::BTN_SELECT => {
+                    evdev::Key::BTN_SELECT => { // Select
                       kind.1 = 4
                     }
-                    evdev::Key::BTN_START => {
+                    evdev::Key::BTN_START => { // Start
                       kind.1 = 5
                     }
-                    evdev::Key::BTN_TL => {
+                    evdev::Key::BTN_TL => { // Shoulder Left
                       kind.1 = 6
                     }
-                    evdev::Key::BTN_TR => {
+                    evdev::Key::BTN_TR => { // Shoulder Right
                       kind.1 = 7
                     }
-                    evdev::Key::BTN_THUMBL => {
+                    evdev::Key::BTN_THUMBL => { // Thumb Left
                       kind.1 = 8
                     }
-                    evdev::Key::BTN_THUMBR => {
+                    evdev::Key::BTN_THUMBR => { // Thumb Right
                       kind.1 = 9
+                    }
+                    evdev::Key::BTN_MODE => {
+                      kind.1 = 10
                     }
                     _ => {
                       println!("{:?}", input_ev);
