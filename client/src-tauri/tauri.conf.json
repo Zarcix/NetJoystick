@@ -2,13 +2,13 @@
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",
-    "devPath": "../src",
+    "devPath": "http://localhost:5555",
     "distDir": "../src",
     "withGlobalTauri": true
   },
   "package": {
-    "productName": "NetJS",
-    "version": "0.0.0"
+    "productName": "CNetJS",
+    "version": "1.0.0"
   },
   "tauri": {
     "allowlist": {

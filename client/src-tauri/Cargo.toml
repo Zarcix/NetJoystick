@@ -26,6 +26,10 @@ tokio = {version = "1.28.0", features = ["full"] }
 log = "0.4.18"
 env_logger = "0.10.0"
 
+[lib]
+name = "lib"
+path = "src/lib/mod.rs"
+
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
 # DO NOT REMOVE!!
