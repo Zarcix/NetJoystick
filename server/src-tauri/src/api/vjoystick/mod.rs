@@ -7,6 +7,13 @@ pub use buttons::Button;
 use input_linux::sys;
 use std::{fs, path, io::Error};
 
+/*
+
+Library from https://github.com/gwilymk/arduino-joystick.git
+Thanks lol
+
+*/
+
 pub struct Joystick {
 	device: input_linux::UInputHandle<fs::File>,
 }
