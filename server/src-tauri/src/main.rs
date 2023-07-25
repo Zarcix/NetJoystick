@@ -5,6 +5,7 @@ mod api;
 
 use tauri::{Manager, State};
 use std::sync::{Arc, Mutex};
+use log::*;
 
 use crate::api::server::Server;
 
