@@ -8,6 +8,9 @@ pub enum Axis {
 	RJSH = 4, // RX
 	RJSV = 5, // RY
 	TRGR = 6, // RZ
+
+	HT0X = 7,
+	HT0Y = 8,
 }
 
 impl Axis {
@@ -20,6 +23,8 @@ impl Axis {
 			RJSH => input_linux::AbsoluteAxis::RX,
 			RJSV => input_linux::AbsoluteAxis::RY,
 			TRGR => input_linux::AbsoluteAxis::RZ,
+			HT0X => input_linux::AbsoluteAxis::Hat0X,
+			HT0Y => input_linux::AbsoluteAxis::Hat0Y
 		}
 	}
 	
