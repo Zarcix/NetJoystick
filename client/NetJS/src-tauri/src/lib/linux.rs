@@ -39,6 +39,7 @@ impl CliController {
 		// R Joystick Horizontal
 		let mut r_h_min = i32::max_value();
 		let mut  r_h_max = i32::min_value();
+
 		// R Joystick Vertical
 		let mut  r_v_min = i32::max_value();
 		let mut  r_v_max = i32::min_value();
@@ -147,60 +148,99 @@ impl CliController {
 		
 		self.calibration = [l_j_calibration.as_slice(), r_j_calibration.as_slice(), t_calibration.as_slice()].concat();
 		
-		info!("--\nCalibration for device: {}\n{:?}\n--", self.device.device().name().unwrap(), self.calibration);
+		debug!("--\nCalibration for device: {}\n{:?}\n--", self.device.device().name().unwrap(), self.calibration);
 
 		Ok(())
 	}
 	
 	pub fn parse_input(&self, event: &evdev::InputEvent) -> (bool, u8) {
-		let mut val_vec = Vec::new();
+		let max_calibration: Vec<_> = self.calibration.iter().map(|calib| { calib.get(1).unwrap() }).collect();
 
 		let mut ret: (bool, u8) = (false, 0); // (neg bit, percentage * 100 as i32)
 
-		if event.value() < 0 { 
-			ret.0 = true;
-			val_vec = self.calibration.iter().map(|calib| {
-				calib.get(0).unwrap()
-			}).collect();
-		} else {
-			val_vec = self.calibration.iter().map(|calib| {
-				calib.get(1).unwrap()
-			}).collect();
-		}
+		let ljs = self.calibration.get(0..2).unwrap();
+		let ljs_h_offset = (ljs.get(0).unwrap().get(0).unwrap() + ljs.get(0).unwrap().get(1).unwrap()) / 2;
+		let ljs_v_offset = (ljs.get(1).unwrap().get(0).unwrap() + ljs.get(1).unwrap().get(1).unwrap()) / 2;
+
+		let rjs = self.calibration.get(2..4).unwrap();
+		let rjs_h_offset = (rjs.get(0).unwrap().get(0).unwrap() + rjs.get(0).unwrap().get(1).unwrap()) / 2;
+		let rjs_v_offset = (rjs.get(1).unwrap().get(0).unwrap() + rjs.get(1).unwrap().get(1).unwrap()) / 2;
 		
 		match &event.kind() {
 			// TODO There is a better way to do this....this has to be i'm just dumb
 			// Left
 			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_X) => {
-				ret.1 = (event.value() as f64 / *val_vec.get(0).unwrap().clone() as f64 * 100 as f64) as u8;
+				let new_min = self.calibration.get(0).unwrap().get(0).unwrap() - ljs_h_offset;
+				let new_max = self.calibration.get(0).unwrap().get(1).unwrap() - ljs_h_offset;
+				
+				let offset_val = event.value() - ljs_h_offset;
+				if offset_val.is_negative() {
+					ret.0 = true;
+					ret.1 = ((offset_val as f32 / new_min as f32) * 100 as f32).round() as u8;
+				} else {
+					ret.0 = false;
+					ret.1 = ((offset_val as f32 / new_max as f32) * 100 as f32).round() as u8;
+				}
 			},
 			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_Y) => {
-				ret.1 = (event.value() as f64 / *val_vec.get(1).unwrap().clone() as f64 * 100 as f64) as u8;
+				let new_min = self.calibration.get(1).unwrap().get(0).unwrap() - ljs_v_offset;
+				let new_max = self.calibration.get(1).unwrap().get(1).unwrap() - ljs_v_offset;
+				
+				let offset_val = event.value() - ljs_v_offset;
+				if offset_val.is_negative() {
+					ret.0 = true;
+					ret.1 = ((offset_val as f32 / new_min as f32) * 100 as f32).round() as u8;
+				} else {
+					ret.0 = false;
+					ret.1 = ((offset_val as f32 / new_max as f32) * 100 as f32).round() as u8;
+				}
 			},
 
 			// Right
 			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_RX) => {
-				ret.1 = (event.value() as f64 / *val_vec.get(2).unwrap().clone() as f64 * 100 as f64) as u8;
+				let new_min = self.calibration.get(2).unwrap().get(0).unwrap() - rjs_h_offset;
+				let new_max = self.calibration.get(2).unwrap().get(1).unwrap() - rjs_h_offset;
+				
+				let offset_val = event.value() - rjs_h_offset;
+				if offset_val.is_negative() {
+					ret.0 = true;
+					ret.1 = ((offset_val as f32 / new_min as f32) * 100 as f32).round() as u8;
+				} else {
+					ret.0 = false;
+					ret.1 = ((offset_val as f32 / new_max as f32) * 100 as f32).round() as u8;
+				}
 			},
 			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_RY) => {
-				ret.1 = (event.value() as f64 / *val_vec.get(3).unwrap().clone() as f64 * 100 as f64) as u8;
+				let new_min = self.calibration.get(3).unwrap().get(0).unwrap() - rjs_v_offset;
+				let new_max = self.calibration.get(3).unwrap().get(1).unwrap() - rjs_v_offset;
+				
+				let offset_val = event.value() - rjs_v_offset;
+				if offset_val.is_negative() {
+					ret.0 = true;
+					ret.1 = ((offset_val as f32 / new_min as f32) * 100 as f32).round() as u8;
+				} else {
+					ret.0 = false;
+					ret.1 = ((offset_val as f32 / new_max as f32) * 100 as f32).round() as u8;
+				}
 			},
 
 			// Triger
 			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_Z) => {
-				ret.1 = (event.value() as f64 / *val_vec.get(4).unwrap().clone() as f64 * 100 as f64) as u8;
+				let max_value = max_calibration.get(4).unwrap().clone().to_owned();
+				ret.1 = ((event.value() as f32 / max_value as f32) * 100 as f32).round() as u8;
 			},
 			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_RZ) => {
-				ret.1 = (event.value() as f64 / *val_vec.get(5).unwrap().clone() as f64 * 100 as f64) as u8;
+				let max_value = max_calibration.get(5).unwrap().clone().to_owned();
+				ret.1 = ((event.value() as f32 / max_value as f32) * 100 as f32).round() as u8;
 			},
 
 			// DPAD
 			evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_HAT0X) | evdev::InputEventKind::AbsAxis(evdev::AbsoluteAxisType::ABS_HAT0Y) => {
+				ret.0 = event.value().is_negative();
 				ret.1 = event.value().abs() as u8;
 			}
 			_ => ()
 		}
-
 		ret
 	}
 

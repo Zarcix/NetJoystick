@@ -166,6 +166,7 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
                 evdev::InputEventKind::AbsAxis(val) => {
                   kind.0 = 2;
                   match val {
+                    // Left
                     evdev::AbsoluteAxisType::ABS_X => {
                       kind.1 = 0;
                     }
@@ -175,6 +176,7 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
                     evdev::AbsoluteAxisType::ABS_Z => {
                       kind.1 = 2;
                     }
+                    // Right
                     evdev::AbsoluteAxisType::ABS_RX => {
                       kind.1 = 3;
                     }
@@ -183,6 +185,13 @@ fn startController(selected_device: String, selected_server: String, cli_state: 
                     }
                     evdev::AbsoluteAxisType::ABS_RZ => {
                       kind.1 = 5;
+                    }
+                    // DPAD
+                    evdev::AbsoluteAxisType::ABS_HAT0X => {
+                      kind.1 = 6;
+                    }
+                    evdev::AbsoluteAxisType::ABS_HAT0Y => {
+                      kind.1 = 7;
                     }
                     // TODO Add more keys
                     _ => ()
