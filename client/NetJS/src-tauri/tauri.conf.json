@@ -2,7 +2,7 @@
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",
-    "devPath": "http://localhost:5555",
+    "devPath": "../src",
     "distDir": "../src",
     "withGlobalTauri": true
   },
@@ -21,7 +21,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.netjs.cool",
+      "identifier": "com.netjs.client",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
@@ -37,7 +37,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "NetJS",
+        "title": "NetJS Client",
         "width": 800,
         "height": 600
       }
