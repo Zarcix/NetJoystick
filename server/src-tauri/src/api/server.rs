@@ -95,7 +95,7 @@ fn start_device(device: &Joystick, receiver: Receiver<[u8; 5]>, client_informati
 		}
 		let recv_result = recv_result.unwrap();
 
-		// Format = [neg?, percentage out of 100, abs/key, code, evtype]
+		write_data(device, &recv_result);
 		
 		
 		let _ = device.synchronise();
@@ -103,9 +103,76 @@ fn start_device(device: &Joystick, receiver: Receiver<[u8; 5]>, client_informati
 	}
 }
 
-fn parse_data(data: [u8; 5]) {
-	let mut value = data[1] as isize;
+fn write_data(device: &Joystick, data: &[u8; 5]) {
+	// Format = [neg?, /100, abs/key, code, evtype]
+	
+	match data[2] {
+		1 => {
+			let parsed_data = parse_button(&data);
+			if parsed_data.0.is_none() {
+				error!("SERVER | {:?} | Button not found. Not continuing", data);
+				return
+			}
+
+			let _ = device.button_press(parsed_data.0.unwrap(), parsed_data.1);
+		}
+		2 => {
+			parse_joystick(&data);
+		}
+		_ => {
+			warn!("SERVER | {} | Unrecognized input type", data[2])
+		}
+	}
+}
+
+fn parse_joystick(data: &[u8; 5]) {
+	// Parse Move Amount
+	let mut move_amt = data[1] as i32;
 	if data[0] == 1 {
-		value = value * -1;
+		move_amt = move_amt * -1;
+	}
+
+	
+}
+
+fn joystick_map(i: u8) -> Option<super::vjoystick::Axis> {
+	use super::vjoystick::Axis::*;
+
+	match i {
+		0 => Some(LJSH),
+		1 => Some(LJSV),
+		2 => Some(TRGL),
+		3 => Some(RJSH),
+		4 => Some(RJSV),
+		5 => Some(TRGR),
+		6 => Some(HT0X),
+		7 => Some(HT0Y),
+		_ => None
+	}
+}
+
+fn parse_button(data: &[u8; 5]) -> (Option<super::vjoystick::Button>, bool) {
+	let is_pressed = data[1] == 1;
+	let button = button_map(data[3]);
+
+	(button, is_pressed)
+}
+
+fn button_map(i: u8) -> Option<super::vjoystick::Button> {
+	use super::vjoystick::Button::*;
+
+	match i {
+		0 => Some(A),
+		1 => Some(B),
+		2 => Some(Y),
+		3 => Some(X),
+		4 => Some(Select),
+		5 => Some(Start),
+		6 => Some(ShoulderL),
+		7 => Some(ShoulderR),
+		8 => Some(ThumbL),
+		9 => Some(ThumbR),
+		10 => Some(Mode),
+		_ => None
 	}
 }
