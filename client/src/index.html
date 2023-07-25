@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<link rel="stylesheet" href="styles.css">
+	</head>
+	
+	<body onload="init()">
+		<form onsubmit='return form_submit();' id="client_form">
+			<div class="controller">
+				<h2 class="controller">Controller Select</h1>
+				<div class="controller">
+					<select class='controller' id="controller options">
+					</select>
+					<br/><br/>
+					<input type=button id="controller reload" onclick="reload()" value="Reload Devices">
+				</div>
+			</div>
+			
+			<div class="server">
+				<h2 class="server title">Server Select</h1>
+				<label for="serverdeets">Enter Server IP and Port:</label>
+				<input type="text" name="serverdeets" id="serverdeetss" value="localhost:6942">
+			</div>
+			
+			<div class="connect">
+				<h2 class="connect title">Connect!</h1>
+				<input type=submit value="Connect!">
+			</div>
+		</form>
+		<script>
+			const { invoke } = window.__TAURI__.tauri
+			
+			// Init
+			function init() {
+				invoke('getDevices').then(
+				(devices) => 
+					{
+						let i = 0;
+						devices.forEach((device) => {
+							let opt = document.createElement('option');
+							opt.value = i;
+							opt.textContent = device;
+							document.getElementById("controller options").appendChild(opt);
+							i += 1;
+						})
+					})
+					.catch((e) => console.error(e))
+			}
+			
+			// Connections
+			
+			function form_submit() {
+				let selected_dev = document.getElementById("controller options").value;
+				let select_ip = document.getElementById("serverdeetss").value;
+
+				// Start Client
+
+				invoke('startController', {
+					selectedDevice: selected_dev, 
+					selectedServer: select_ip
+					});
+				
+				// Reload Devices
+
+				invoke('getDevices').then(
+					(devices) => 
+						{
+							document.getElementById("controller options").innerHTML = '';
+							let i = 0;
+							devices.forEach((device) => {
+								let opt = document.createElement('option');
+								opt.value = i;
+								opt.textContent = device;
+								document.getElementById("controller options").appendChild(opt);
+								i += 1;
+							})
+						})
+						.catch((e) => console.error(e));
+
+				// Disable page reloads
+				return false;
+			}
+			
+			function reload(event) {
+				invoke('getDevices').then(
+				(devices) => 
+					{
+						document.getElementById("controller options").innerHTML = '';
+						let i = 0;
+						devices.forEach((device) => {
+							let opt = document.createElement('option');
+							opt.value = i;
+							opt.textContent = device;
+							document.getElementById("controller options").appendChild(opt);
+							i += 1;
+						})
+					})
+					.catch((e) => console.error(e));
+			}
+			
+			
+
+		</script>
+	</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+	<!-- add style oooooo -->
+	<head>
+		<link rel="stylesheet" href="./style.css">
+    <script type="text/javascript" src="./main.js"></script>
+	</head>
+  <body onload="invoke('init_server')">
+    <div id="ClientPage">
+      <!-- Connected Clients --> 
+      <div>
+        <h2 class="title">
+          Connected Client
+        </h2>
+
+        <table class="clitable" id="connectedClients">
+          <!-- Default
+
+          <tr id="client">
+            <td id="ip" class="clitabledata">127.0.0.1</td>
+            <td id="buttons" class="clitabledata">
+              <button>dc</button>
+              <button>rename</button>
+            </td>
+          </tr>
+
+          -->
+        </table>
+      </div>
+      <br>
+
+      <!-- Pending Clients -->
+      <div>
+
+        <h2 class="title">
+          Pending Clients
+        </h2>
+
+        <table class="clitable" id="pendingClients"> 
+          <!-- Default
+
+          <tr>
+            <td class="clitabledata">127.0.0.2</td>
+            <td class="clitabledata">
+              <button onclick="invoke('callback')">accept</button>
+              <button>deny</button>
+            </td>
+          </tr>
+
+          -->
+        </table>
+      </div>
+    </div>
+    <!--
+    <div id="LogPage" style="display: none;">
+      lol not done
+    </div>
+
+    <div class="Pagination">
+      <button onclick="return switchPages('ClientPage','LogPage');">Clients</button>
+      <button onclick="return switchPages('LogPage', 'ClientPage');">Logs</button>
+    </div>
+    -->
+  </body>
+</html>

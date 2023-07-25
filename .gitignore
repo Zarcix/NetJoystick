@@ -1,1 +1,7 @@
-target/**
+# For client
+client/src-tauri/target
+client/src-tauri/Cargo.lock
+
+# For server
+server/SNetJS/src-tauri/target
+server/SNetJS/src-tauri/Cargo.lock

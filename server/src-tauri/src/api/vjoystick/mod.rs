@@ -4,14 +4,23 @@ mod buttons;
 pub use axis::Axis;
 pub use buttons::Button;
 
-use input_linux::{sys};
+use input_linux::sys;
 use std::{fs, path, io::Error};
+
+/*
+
+Library from https://github.com/gwilymk/arduino-joystick.git
+Thanks lol
+
+*/
 
 pub struct Joystick {
 	device: input_linux::UInputHandle<fs::File>,
 }
 
 impl Joystick {
+	// Device Initialization
+
 	pub fn new(identifier: String) -> Result<Self, Error> {
 		let device = create_device(identifier)?;
 		
@@ -22,7 +31,52 @@ impl Joystick {
 		Ok(self.device.evdev_path()?)
 	}
 	
+	pub fn destroy_device(&self) -> Result<(), Error> {
+		self.device.dev_destroy()
+	}
+
+	// Device Movement
+
+	pub fn move_axis(&self, axis: Axis, position: i32) -> Result<(), std::io::Error> {
+		if position < -100 || position > 100 {
+			// TODO Turn into proper error
+			return Err(std::io::ErrorKind::Other.into());
+		}
+
+		self.write_event(input_linux::AbsoluteEvent::new(
+			empty_event_time(),
+			axis.to_evdev(),
+			position
+		))
+	}
+
+	pub fn button_press(&self, button: Button, is_pressed: bool) -> Result<(), Error> {
+		let value = if is_pressed {
+            input_linux::KeyState::PRESSED
+        } else {
+            input_linux::KeyState::RELEASED
+        };
+
+		self.write_event(input_linux::KeyEvent::new(
+            empty_event_time(),
+            button.to_evdev(),
+            value,
+        ))
+	}
 	
+	pub fn synchronise(&self) -> Result<(), Error> {
+        self.write_event(input_linux::SynchronizeEvent::report(empty_event_time()))
+    }
+
+	fn write_event(&self, event: impl std::convert::AsRef<sys::input_event>) -> Result<(), Error> {
+        self.device.write(&[*event.as_ref()])?;
+
+        Ok(())
+    }
+}
+
+fn empty_event_time() -> input_linux::EventTime {
+    input_linux::EventTime::default()
 }
 
 fn create_device(identifier: String) -> Result<input_linux::UInputHandle<fs::File>, Error> {
@@ -60,7 +114,7 @@ fn create_device(identifier: String) -> Result<input_linux::UInputHandle<fs::Fil
 		&Axis::all_axis().map(|current_axis| input_linux::AbsoluteInfoSetup {
 			axis: current_axis.to_evdev(),
 			info: standard_info,
-		}).collect::<Vec<_>>() // i dunno what the type is too lazy to find lol
+		}).collect::<Vec<_>>()
 	)?;
 	
 	Ok(device)
