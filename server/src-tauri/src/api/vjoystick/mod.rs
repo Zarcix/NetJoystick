@@ -38,7 +38,7 @@ impl Joystick {
 	// Device Movement
 
 	pub fn move_axis(&self, axis: Axis, position: i32) -> Result<(), std::io::Error> {
-		if position < 0 || position > 100 {
+		if position < -100 || position > 100 {
 			// TODO Turn into proper error
 			return Err(std::io::ErrorKind::Other.into());
 		}

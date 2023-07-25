@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum Button {
 	// Button Buttons
 	A = 1,

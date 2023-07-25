@@ -55,8 +55,8 @@ impl Server {
 
 		// Create receive request from current client's sender
 		std::thread::spawn(move || {
-
-			if let Ok(device) = Joystick::new(client_information.clone()) {
+			let addr = client_information.clone().split_once(":").unwrap().0.to_string();
+			if let Ok(device) = Joystick::new(addr) {
 				start_device(&device, receiver, &client_information);
 				warn!("SERVER | {} | Thread dying. Removing", &client_information);
 
@@ -108,16 +108,22 @@ fn write_data(device: &Joystick, data: &[u8; 5]) {
 	
 	match data[2] {
 		1 => {
-			let parsed_data = parse_button(&data);
-			if parsed_data.0.is_none() {
+			let (button, is_pressed) = parse_button(&data);
+			if button.is_none() {
 				error!("SERVER | {:?} | Button not found. Not continuing", data);
 				return
 			}
-
-			let _ = device.button_press(parsed_data.0.unwrap(), parsed_data.1);
+			debug!("Server | {button:?}:{is_pressed} | Sending button to server device");
+			let _ = device.button_press(button.unwrap(), is_pressed);
 		}
 		2 => {
-			parse_joystick(&data);
+			let (axis, position) = parse_joystick(&data);
+			if axis.is_none() {
+				error!("Server | {:?} | Axis not found. Not continuing", data);
+				return
+			}
+			debug!("Server | {axis:?}:{position} | Sending axis to server device");
+			let _ = device.move_axis(axis.unwrap(), position);
 		}
 		_ => {
 			warn!("SERVER | {} | Unrecognized input type", data[2])
@@ -125,14 +131,16 @@ fn write_data(device: &Joystick, data: &[u8; 5]) {
 	}
 }
 
-fn parse_joystick(data: &[u8; 5]) {
+fn parse_joystick(data: &[u8; 5]) -> (Option<super::vjoystick::Axis>, i32) {
 	// Parse Move Amount
-	let mut move_amt = data[1] as i32;
+	let axis = joystick_map(data[3]);
+
+	let mut position = data[1] as i32;
 	if data[0] == 1 {
-		move_amt = move_amt * -1;
+		position = position * -1;
 	}
 
-	
+	(axis, position)
 }
 
 fn joystick_map(i: u8) -> Option<super::vjoystick::Axis> {
