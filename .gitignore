@@ -1,6 +1,6 @@
 # For client
-client/NetJS/src-tauri/target
-client/NetJS/src-tauri/Cargo.lock
+client/src-tauri/target
+client/src-tauri/Cargo.lock
 
 # For server
 server/SNetJS/src-tauri/target
