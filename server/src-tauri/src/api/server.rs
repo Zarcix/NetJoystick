@@ -6,7 +6,7 @@ use super::vjoystick::Joystick;
 use log::*;
 
 pub struct Server {
-	connected_clients: HashMap<String, SyncSender<[u8; 5]>>,
+	connected_clients: HashMap<String, SyncSender<[u8; 4]>>,
 	potential_clients: HashSet<String>
 }
 
@@ -45,7 +45,7 @@ impl Server {
 	pub fn connect_client(&mut self, client_information: String) {
 		debug!("Adding Client: {}", client_information.clone());
 		
-		let (sender, receiver) = sync_channel::<[u8; 5]>(5);
+		let (sender, receiver) = sync_channel::<[u8; 4]>(5);
 		
 		// Push the client's sender 
 		let old_elem = self.connected_clients.insert(client_information.clone(), sender);
@@ -77,16 +77,16 @@ impl Server {
 		debug!("SERVER | {client_information} | {} | Removed client with result", if removal.is_some() { "success" } else { "fail" } );
 	}
 
-	pub fn find_connected_client(&self, client_information: String) -> Option<&SyncSender<[u8; 5]>> {
+	pub fn find_connected_client(&self, client_information: String) -> Option<&SyncSender<[u8; 4]>> {
 		self.connected_clients.get(&client_information)
 	}
 
-	pub fn get_connected_clients(&self) -> &HashMap<String, SyncSender<[u8; 5]>> {
+	pub fn get_connected_clients(&self) -> &HashMap<String, SyncSender<[u8; 4]>> {
 		return &self.connected_clients
 	}
 }
 
-fn start_device(device: &Joystick, receiver: Receiver<[u8; 5]>, client_information: &String) {
+fn start_device(device: &Joystick, receiver: Receiver<[u8; 4]>, client_information: &String) {
 	loop {
 		// If sender is deallocated, then end thread
 		let recv_result = receiver.recv();
@@ -103,7 +103,7 @@ fn start_device(device: &Joystick, receiver: Receiver<[u8; 5]>, client_informati
 	}
 }
 
-fn write_data(device: &Joystick, data: &[u8; 5]) {
+fn write_data(device: &Joystick, data: &[u8; 4]) {
 	// Format = [neg?, /100, abs/key, code, evtype]
 	
 	match data[2] {
@@ -131,7 +131,7 @@ fn write_data(device: &Joystick, data: &[u8; 5]) {
 	}
 }
 
-fn parse_joystick(data: &[u8; 5]) -> (Option<super::vjoystick::Axis>, i32) {
+fn parse_joystick(data: &[u8; 4]) -> (Option<super::vjoystick::Axis>, i32) {
 	// Parse Move Amount
 	let axis = joystick_map(data[3]);
 
@@ -159,7 +159,7 @@ fn joystick_map(i: u8) -> Option<super::vjoystick::Axis> {
 	}
 }
 
-fn parse_button(data: &[u8; 5]) -> (Option<super::vjoystick::Button>, bool) {
+fn parse_button(data: &[u8; 4]) -> (Option<super::vjoystick::Button>, bool) {
 	let is_pressed = data[1] == 1;
 	let button = button_map(data[3]);
 
