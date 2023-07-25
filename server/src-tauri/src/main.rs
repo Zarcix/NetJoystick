@@ -10,7 +10,7 @@ use crate::api::server::Server;
 
 #[tauri::command]
 async fn disconnect_client(app_handle: tauri::AppHandle, server: State<'_, Arc<Mutex<Server>>>, client: String) -> Result<(), ()> {
-    println!("Request to disconnect client: {}", client);
+    debug!("Request to disconnect client: {}", client);
 
     let mut server_lock = server.lock().unwrap();
     server_lock.disconnect_client(client.clone());
@@ -22,7 +22,7 @@ async fn disconnect_client(app_handle: tauri::AppHandle, server: State<'_, Arc<M
 
 #[tauri::command]
 async fn deny_client(app_handle: tauri::AppHandle, server: State<'_, Arc<Mutex<Server>>>, client: String) -> Result<(), ()> {
-    println!("Request to deny client: {}", client);
+    debug!("Request to deny client: {}", client);
 
     let mut server_lock = server.lock().unwrap();
     server_lock.remove_client(client.clone());
@@ -34,7 +34,7 @@ async fn deny_client(app_handle: tauri::AppHandle, server: State<'_, Arc<Mutex<S
 
 #[tauri::command]
 async fn accept_client(app_handle: tauri::AppHandle, server: State<'_, Arc<Mutex<Server>>>, client: String) -> Result<(), ()> {
-    println!("Request to accept client: {}", client);
+    debug!("Request to accept client: {}", client);
 
     let mut server_lock = server.lock().unwrap();
     server_lock.connect_client(client.clone());
@@ -48,17 +48,16 @@ async fn accept_client(app_handle: tauri::AppHandle, server: State<'_, Arc<Mutex
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 async fn reload_clients(app_handle: tauri::AppHandle) -> (Vec<String>, Vec<String>) {
-    println!("Reload hit");
     let state = app_handle.state::<Arc<Mutex<Server>>>();
     let server = state.lock().unwrap();
 
     // Pending Clients
 
-    println!("{:?}", server.get_clients());
+    debug!("SERVER | {:?} | Pending Clients", server.get_clients());
     let pending_clients = server.get_clients().iter().map(|val| val.to_string()).collect();
 
     // Connected Clients
-    println!("{:?}", server.get_connected_clients());
+    debug!("SERVER | {:?} | Connected Clients", server.get_connected_clients());
     let connected_clients: Vec<String> = server.get_connected_clients().iter().map(|val| val.0.to_string()).collect();
 
     drop(server);
