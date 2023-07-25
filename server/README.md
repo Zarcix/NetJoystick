@@ -4,6 +4,6 @@ Server component of NetJS
 
 ## To build
 
-cargo install tauri
+cargo install tauri-cli
 
 cargo tauri build
